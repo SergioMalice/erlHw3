@@ -12,10 +12,12 @@
 %% API
 -export([decode/2]).
 
-% успел сделать парсер в проплисты. Тест для копирования ниже. Комментарии объяснят логику кода
+% Комментарии объяснят логику кода. Строка для копирования теста:
 % bs04:decode(<<"{'squadName': 'Super hero squad','homeTown': 'Metro City','formed': 2016,'secretBase': 'Super tower','active': true,'members': [{'name': 'Molecule Man','age': 29,'secretIdentity': 'Dan Jukes','powers': ['Radiation resistance','Turning tiny','Radiation blast']},{'name': 'Madame Uppercut','age': 39,'secretIdentity': 'Jane Wilson','powers': ['Million tonne punch','Damage resistance','Superhuman reflexes']},{'name': 'Eternal Flame','age': 1000000,'secretIdentity': 'Unknown','powers': ['Immortality','Heat Immunity','Inferno','Teleportation','Interdimensional travel']}] } ">>, proplist).
+% bs04:decode(<<"{'squadName': 'Super hero squad','homeTown': 'Metro City','formed': 2016,'secretBase': 'Super tower','active': true,'members': [{'name': 'Molecule Man','age': 29,'secretIdentity': 'Dan Jukes','powers': ['Radiation resistance','Turning tiny','Radiation blast']},{'name': 'Madame Uppercut','age': 39,'secretIdentity': 'Jane Wilson','powers': ['Million tonne punch','Damage resistance','Superhuman reflexes']},{'name': 'Eternal Flame','age': 1000000,'secretIdentity': 'Unknown','powers': ['Immortality','Heat Immunity','Inferno','Teleportation','Interdimensional travel']}] } ">>, map).
 
-decode(<<"{", Rest/binary>>, Method) when Method == proplist -> prop(clear_input(Rest, no, <<>>), key, 1, <<>>, [], []).
+decode(<<"{", Rest/binary>>, Method) ->
+  prop(clear_input(Rest, no, <<>>), key, 1, <<>>, [], case Method of proplist -> []; map -> #{} end).
 % пропускаем начало входа, чтобы не было совпадения с { началом обработки "вложенного json"
 %%decode(Json, Method) -> map(Json, map)
 
@@ -36,12 +38,13 @@ prop(<<"'", Rest/binary>>, Flag, InnerCnt, Bin, List, Res) when (Flag == value) 
   ValueSize = byte_size(Value)+1,
   <<_:ValueSize/binary, NewRest/binary>> = Rest,
   case Flag of
-    value -> prop(NewRest, value, InnerCnt, <<>>, List, [{Bin, Value}|Res]);
+    value ->
+      prop(NewRest, value, InnerCnt, <<>>, List, case is_map(Res) of false -> [{Bin, Value}|Res]; _ -> maps:put(Bin, Value, Res) end);
     inner -> prop(NewRest, inner, InnerCnt, Bin, [Value|List], Res)
   end; %записываем кортеж в результат
 prop(<<"{", Rest/binary>>, Flag, Cnt, Bin, List, Res) -> % { - начинаем парсинг "вложенного json"
   {Inner, Count} = read_inner(Rest, <<>>, 0, 0),
-  InnerRes = prop(Inner, key, Cnt+1, Bin, [], []),
+  InnerRes = prop(Inner, key, Cnt+1, Bin, [], case is_map(Res) of false -> []; _ -> #{} end),
   case (Cnt == 1) of
     true ->
       case Flag of
@@ -49,23 +52,23 @@ prop(<<"{", Rest/binary>>, Flag, Cnt, Bin, List, Res) -> % { - начинаем 
         _ ->
           case Bin == <<>> of
             false -> prop(skip(Rest, Count+1), value, Cnt, Bin, [InnerRes|List], Res);
-            _ -> prop(skip(Rest, Count+1), value, Cnt, Bin, List, [InnerRes|Res])
+            _ -> prop(skip(Rest, Count+1), value, Cnt, Bin, List, case is_map(Res) of false -> [InnerRes|Res]; _ -> maps:merge(Res, InnerRes) end)
           end
       end;
-    _ -> {Bin, InnerRes}
+    _ -> case is_map(Res) of false -> {Bin, InnerRes}; _ -> #{Bin => InnerRes} end
   end;
 
-prop(<<"}", _/binary>>, _Flag, _InnerCnt, _Bin, _List, Res) -> reverse(Res); % } - заканчиваем парсинг "вложенного json"
+prop(<<"}", _/binary>>, _Flag, _InnerCnt, _Bin, _List, Res) -> case is_map(Res) of false -> lists:reverse(Res); _ -> Res end; % } - заканчиваем парсинг "вложенного json"
 prop(<<"[", Rest/binary>>, _Flag, InnerCnt, Bin, _List, Res) -> % [ - начинаем запись вложенного списка
   prop(Rest, inner, InnerCnt, Bin, [], Res); % начали запись значения в кортеж со значением - списком
 prop(<<"]", Rest/binary>>, _Flag, InnerCnt, Bin, List, Res) -> % [ - заканчиваем запись вложенного списка
-  prop(Rest, value, InnerCnt, <<>>, <<>>, [{Bin, reverse(List)}|Res]);
+  prop(Rest, value, InnerCnt, <<>>, <<>>, case is_map(Res) of false -> [{Bin, lists:reverse(List)}|Res]; _ -> maps:put(Bin, lists:reverse(List), Res) end);
 prop(<<C/utf8, Rest/binary>>, value, InnerCnt, Bin, List, Res) -> % символ с флагом значения - true, false или число
   Value = read_key(<<C/utf8, Rest/binary>>, <<>>, atom),
   ValueSize = byte_size(Value)-1,
   <<_:ValueSize/binary, NewRest/binary>> = Rest,
-  prop(NewRest, value, InnerCnt, <<>>, List, [{Bin, parse_value(Value)}|Res]); %записываем кортеж в результат
-prop(<<>>, _, _, _, _, Res) -> reverse(Res).
+  prop(NewRest, value, InnerCnt, <<>>, List, case is_map(Res) of false -> [{Bin, parse_value(Value)}|Res]; _ -> maps:put(Bin, parse_value(Value), Res) end); %записываем кортеж в результат
+prop(<<>>, _, _, _, _, Res) -> case is_map(Res) of false -> lists:reverse(Res); _ -> Res end.
 
 % убираем все пробелы, кроме тех, что в ключах/значениях и переводы строк на входе
 clear_input(<<" ", Rest/binary>>, no, _Res) -> clear_input(Rest, no, _Res);
@@ -101,8 +104,3 @@ parse_value(Word) -> % преобразовываем строку в true false
            _:_ -> Word
          end
   end.
-
-reverse(List) -> reverse(List, []).
-
-reverse([], Res) -> Res;
-reverse([H|T], Res) -> reverse(T, [H|Res]).
