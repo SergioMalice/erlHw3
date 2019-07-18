@@ -11,6 +11,7 @@
 
 %% API
 -export([first_word/1]).
+-define(TEST, 1).
 
 % first_word/1 находит в бинарнике первое слово и возвращает его.
 % 1> BinText = <<"Some text">>.
@@ -28,3 +29,13 @@ first_word(Bin) -> first_word(Bin, <<>>).
 first_word(<<" ", _/binary>>, Acc) -> Acc;
 first_word(<<C/utf8, Rest/binary>>, Acc) -> first_word(Rest, <<Acc/binary, C/utf8>>);
 first_word(<<>>, Acc) -> Acc.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+bs01_test_() -> [
+  ?_assert(first_word(<<"Some text">>) =:= <<"Some">>),
+  ?_assert(first_word(<<"First word">>) =:= <<"First">>),
+  ?_assert(first_word(<<"Need to test">>) =:= <<"Need">>)
+].
+
+-endif.

@@ -11,6 +11,7 @@
 
 %% API
 -export([words/1]).
+-define(TEST, 1).
 
 % words/1 разбивает бинарник на слова. Пример:
 % 1> BinText = <<"Text with four words">>.
@@ -34,3 +35,13 @@ reverse(List) -> reverse(List, []).
 
 reverse([], Res) -> Res;
 reverse([H|T], Res) -> reverse(T, [H|Res]).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+bs02_test_() -> [
+  ?_assert(words(<<"Text with four words">>) =:= [<<"Text">>, <<"with">>, <<"four">>, <<"words">>]),
+  ?_assert(words(<<"Next test">>) =:= [<<"Next">>, <<"test">>]),
+  ?_assert(words(<<"Need to test">>) =:= [<<"Need">>, <<"to">>, <<"test">>])
+].
+
+-endif.

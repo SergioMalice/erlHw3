@@ -11,6 +11,7 @@
 
 %% API
 -export([split/2]).
+-define(TEST, 1).
 
 % split/1 разбивает бинарник на слова, с явным указанием разделителя. Пример:
 % 1> BinText = <<"Col1-:-Col2-:-Col3-:-Col4-:-Col5">>.
@@ -64,3 +65,9 @@ reverse(List) -> reverse(List, []).
 
 reverse([], Res) -> Res;
 reverse([H|T], Res) -> reverse(T, [H|Res]).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+bs03_test() -> ?assert(split(<<"Col1-:-Col2-:-Col3-:-Col4-:-Col5">>, "-:-") =:= [<<"Col1">>, <<"Col2">>, <<"Col3">>, <<"Col4">>, <<"Col5">>]).
+
+-endif.
