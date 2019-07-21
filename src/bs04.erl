@@ -1,25 +1,16 @@
-%%%-------------------------------------------------------------------
-%%% @author sergeyb
-%%% @copyright (C) 2019, <COMPANY>
-%%% @doc
-%%%
-%%% @end
-%%% Created : 25. Июнь 2019 20:11
-%%%-------------------------------------------------------------------
 -module(bs04).
 -author("sergeyb").
 
 %% API
 -export([decode/2]).
 
-% Комментарии объяснят логику кода. Строка для копирования теста:
-% bs04:decode(<<"{'squadName': 'Super hero squad','homeTown': 'Metro City','formed': 2016,'secretBase': 'Super tower','active': true,'members': [{'name': 'Molecule Man','age': 29,'secretIdentity': 'Dan Jukes','powers': ['Radiation resistance','Turning tiny','Radiation blast']},{'name': 'Madame Uppercut','age': 39,'secretIdentity': 'Jane Wilson','powers': ['Million tonne punch','Damage resistance','Superhuman reflexes']},{'name': 'Eternal Flame','age': 1000000,'secretIdentity': 'Unknown','powers': ['Immortality','Heat Immunity','Inferno','Teleportation','Interdimensional travel']}] } ">>, proplist).
-% bs04:decode(<<"{'squadName': 'Super hero squad','homeTown': 'Metro City','formed': 2016,'secretBase': 'Super tower','active': true,'members': [{'name': 'Molecule Man','age': 29,'secretIdentity': 'Dan Jukes','powers': ['Radiation resistance','Turning tiny','Radiation blast']},{'name': 'Madame Uppercut','age': 39,'secretIdentity': 'Jane Wilson','powers': ['Million tonne punch','Damage resistance','Superhuman reflexes']},{'name': 'Eternal Flame','age': 1000000,'secretIdentity': 'Unknown','powers': ['Immortality','Heat Immunity','Inferno','Teleportation','Interdimensional travel']}] } ">>, map).
+% Комментарии объяснят логику кода.
+% Общие тесты на весь раздел домашнего задания:
+% make tests в консоли
 
 decode(<<"{", Rest/binary>>, Method) ->
   prop(clear_input(Rest, no, <<>>), key, 1, <<>>, [], case Method of proplist -> []; map -> #{} end).
 % пропускаем начало входа, чтобы не было совпадения с { началом обработки "вложенного json"
-%%decode(Json, Method) -> map(Json, map)
 
 prop(<<C, Rest/binary>>, Flag, InnerCnt, Bin, List, Res) when (C == 58) or (C == 44) -> %двоеточие и , смена флага
   NewFlag = case Flag of

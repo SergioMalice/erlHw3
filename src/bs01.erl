@@ -1,18 +1,12 @@
-%%%-------------------------------------------------------------------
-%%% @author sergeyb
-%%% @copyright (C) 2019, <COMPANY>
-%%% @doc
-%%%
-%%% @end
-%%% Created : 25. Июнь 2019 20:11
-%%%-------------------------------------------------------------------
 -module(bs01).
 -author("sergeyb").
 
 %% API
 -export([first_word/1]).
--define(TEST, 1).
 
+% Общие тесты на весь раздел домашнего задания:
+% make tests в консоли
+%
 % first_word/1 находит в бинарнике первое слово и возвращает его.
 % 1> BinText = <<"Some text">>.
 % <<"Some Text">>
@@ -29,13 +23,3 @@ first_word(Bin) -> first_word(Bin, <<>>).
 first_word(<<" ", _/binary>>, Acc) -> Acc;
 first_word(<<C/utf8, Rest/binary>>, Acc) -> first_word(Rest, <<Acc/binary, C/utf8>>);
 first_word(<<>>, Acc) -> Acc.
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-bs01_test_() -> [
-  ?_assert(first_word(<<"Some text">>) =:= <<"Some">>),
-  ?_assert(first_word(<<"First word">>) =:= <<"First">>),
-  ?_assert(first_word(<<"Need to test">>) =:= <<"Need">>)
-].
-
--endif.
